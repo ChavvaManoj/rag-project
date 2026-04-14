@@ -44,6 +44,11 @@ llm = ChatOpenAI(
 )
 
 # -------------------------------
+# 🧠 Chat Memory (simple)
+# -------------------------------
+chat_history = []
+
+# -------------------------------
 # 📄 PDF Text Extraction
 # -------------------------------
 def extract_text_from_pdf(file_path):
@@ -198,14 +203,26 @@ async def query_rag(request: QueryRequest):
     }
     for doc in docs
     ]
+
+    # Format chat history
+    history_text = ""
+    for chat in chat_history[-5:]:   # last 5 interactions
+        history_text += f"User: {chat['question']}\nAssistant: {chat['answer']}\n"
+
+
+
     prompt = f"""
 You are a strict AI assistant.
 
 Rules:
-1. Answer ONLY from the provided context
+1. Use both conversation history and context to answer the question
 2. Do NOT make up information
 3. If the answer is not in the context, say "I don't know"
 4. Keep answers clear and concise
+
+
+Conversation History:
+{history_text}
 
 Context:
 {context}
@@ -216,6 +233,18 @@ Question:
 
     response = llm.invoke(prompt)
 
+    answer = response.content
+
+    #Save in chat history
+    chat_history.append({
+        "question": query,
+        "answer": answer
+    })
+
+    print("chat_history:", chat_history)
+    print("Chat history updated. Total interactions:", len(chat_history))
+
+    #return response + sources
     return {
     "query": query,
     "answer": response.content,
