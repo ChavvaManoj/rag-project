@@ -1,0 +1,10 @@
+[
+  {
+    "question": "What is AMAT?",
+    "answer": "AMAT is Average Memory Access Time and is calculated using formulas involving memory access, TLB, and page faults."
+  },
+  {
+    "question": "What is thrashing?",
+    "answer": "Thrashing is a condition of very high page fault rate in virtual memory systems."
+  }
+]

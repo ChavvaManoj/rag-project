@@ -63,7 +63,7 @@ def extract_text_from_pdf(file_path):
 # -------------------------------
 # ✂️ Chunking Logic
 # -------------------------------
-def chunk_text(text, chunk_size=500, overlap=100):
+def chunk_text(text, chunk_size=300, overlap=50):
     chunks = []
     start = 0
 
@@ -204,6 +204,7 @@ async def query_rag(request: QueryRequest):
     for doc in docs
     ]
 
+
     # Format chat history
     history_text = ""
     for chat in chat_history[-5:]:   # last 5 interactions
@@ -215,10 +216,12 @@ async def query_rag(request: QueryRequest):
 You are a strict AI assistant.
 
 Rules:
-1. Use both conversation history and context to answer the question
-2. Do NOT make up information
-3. If the answer is not in the context, say "I don't know"
-4. Keep answers clear and concise
+1. Answer ONLY using the given context
+2. Keep the answer SHORT (1-2 lines)
+3. Do NOT add any extra knowledge or assumptions
+4. Use wording similar to context
+5. Do NOT add extra explanation
+6. If unsure, say "I don't know"
 
 
 Conversation History:
@@ -241,6 +244,8 @@ Question:
         "answer": answer
     })
 
+    sources_text =  [doc.page_content for doc in docs]
+
     print("chat_history:", chat_history)
     print("Chat history updated. Total interactions:", len(chat_history))
 
@@ -248,5 +253,6 @@ Question:
     return {
     "query": query,
     "answer": response.content,
-    "sources": sources
+    "sources": sources,
+    "sources_text": sources_text
 }
