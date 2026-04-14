@@ -130,6 +130,32 @@ async def ingest(file: UploadFile = File(...)):
         "chunks": len(chunks)
     }
 
+
+def keyword_search(query, docs):
+    results = []
+    query_lower = query.lower()
+
+    for doc in docs:
+        if query_lower in doc.page_content.lower():
+            results.append(doc)
+    
+    return results
+
+
+def simple_rerank(query, docs):
+    scored = []
+
+    query_Wprds = set(query.lower().split())
+
+    for doc in docs:
+        doc_words = set(doc.page_content.lower().split())
+        score = len(query_Wprds.intersection(doc_words))
+        scored.append((score, doc))
+    
+    scored.sort(reverse=True, key=lambda x: x[0])
+
+    return [doc for _, doc in scored]
+
 # -------------------------------
 # 🔍 Query API
 # -------------------------------
@@ -145,7 +171,23 @@ async def query_rag(request: QueryRequest):
 
     print("🔍 Query received:", query)
 
-    docs = vector_store.similarity_search(query, k=3)
+    #vector search
+    vector_docs = vector_store.similarity_search(query, k=3)
+
+    #Keyword search
+    keyword_docs = keyword_search(query, vector_docs)
+
+    #Merge + remove duplicates
+    all_docs = vector_docs + keyword_docs
+
+    #Deduplicate while preserving order
+    unique_docs = list({doc.page_content: doc for doc in all_docs}.values())
+
+    docs = simple_rerank(query, unique_docs)
+
+    # take top 3 after reranking
+    docs = docs[:3]
+
 
     context = "\n\n".join([doc.page_content for doc in docs])
 
