@@ -40,3 +40,15 @@ __pycache__/
 # Upload folders
 uploaded_docs/
 rag-uploads/
+
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Vector DB (Chroma)
+chroma_db/
+
+# Env
+.env
