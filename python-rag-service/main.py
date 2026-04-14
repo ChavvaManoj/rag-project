@@ -4,9 +4,11 @@ import os
 import re
 
 from pypdf import PdfReader
+from pydantic import BaseModel
 
-from langchain_openai import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.vectorstores import Chroma
+
 from dotenv import load_dotenv
 load_dotenv()
 # -------------------------------
@@ -32,6 +34,13 @@ vector_store = Chroma(
     collection_name="documents",
     embedding_function=embedding,
     persist_directory=CHROMA_DIR
+)
+# -------------------------------
+# 🤖 Initialize LLM
+# -------------------------------
+llm = ChatOpenAI(
+    model="gpt-3.5-turbo",   # or "gpt-4o-mini"
+    temperature=0
 )
 
 # -------------------------------
@@ -116,16 +125,39 @@ async def ingest(file: UploadFile = File(...)):
 # -------------------------------
 # 🔍 Query API
 # -------------------------------
+class QueryRequest(BaseModel):
+    query: str
+
+
+
 @app.post("/query")
-async def query_rag(query: str):
+async def query_rag(request: QueryRequest):
+
+    query = request.query
 
     print("🔍 Query received:", query)
 
-    results = vector_store.similarity_search(query, k=3)
+    docs = vector_store.similarity_search(query, k=3)
 
-    extracted = [doc.page_content for doc in results]
+    context = "\n\n".join([doc.page_content for doc in docs])
+
+    prompt = f"""
+You are a helpful AI assistant.
+
+Answer the question ONLY using the context below.
+If the answer is not present, say "I don't know".
+
+Context:
+{context}
+
+Question:
+{query}
+"""
+
+    response = llm.invoke(prompt)
 
     return {
         "query": query,
-        "results": extracted
+        "answer": response.content,
+        "sources": [doc.page_content for doc in docs]
     }
