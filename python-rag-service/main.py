@@ -113,7 +113,15 @@ async def ingest(file: UploadFile = File(...)):
     print(f"📦 Total chunks created: {len(chunks)}")
 
     # Store embeddings
-    vector_store.add_texts(chunks)
+    metadatas = [
+    {
+        "source": safe_filename,
+        "chunk_id": i
+    }
+    for i in range(len(chunks))
+    ]
+
+    vector_store.add_texts(chunks, metadatas=metadatas)
 
     print("🧬 Stored embeddings in ChromaDB")
 
@@ -141,11 +149,21 @@ async def query_rag(request: QueryRequest):
 
     context = "\n\n".join([doc.page_content for doc in docs])
 
+    sources = [
+    {
+        "source": doc.metadata.get("source"),
+        "chunk_id": doc.metadata.get("chunk_id")
+    }
+    for doc in docs
+    ]
     prompt = f"""
-You are a helpful AI assistant.
+You are a strict AI assistant.
 
-Answer the question ONLY using the context below.
-If the answer is not present, say "I don't know".
+Rules:
+1. Answer ONLY from the provided context
+2. Do NOT make up information
+3. If the answer is not in the context, say "I don't know"
+4. Keep answers clear and concise
 
 Context:
 {context}
@@ -157,7 +175,7 @@ Question:
     response = llm.invoke(prompt)
 
     return {
-        "query": query,
-        "answer": response.content,
-        "sources": [doc.page_content for doc in docs]
-    }
+    "query": query,
+    "answer": response.content,
+    "sources": sources
+}
