@@ -2,6 +2,7 @@ package com.learn.askthedoc.controller;
 
 
 import com.learn.askthedoc.service.DocumentService;
+import com.learn.askthedoc.service.PythonService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,9 +19,11 @@ import java.io.IOException;
 public class DocumentController {
 
     private final DocumentService service;
+    private final PythonService pythonService;
 
-    public DocumentController(DocumentService service){
+    public DocumentController(DocumentService service, PythonService pythonService){
         this.service= service;
+        this.pythonService = pythonService;
     }
 
 
@@ -39,6 +42,9 @@ public class DocumentController {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+            //----Sending to Python
+            File savedFile = new File(filePath);
+            pythonService.sendFileToPython(savedFile);
 
             service.saveDocument(file.getOriginalFilename(), filePath);
             return  ResponseEntity.ok("File uploaded Successfully");
